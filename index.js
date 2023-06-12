@@ -154,6 +154,22 @@ async function run() {
             res.send(result);
         })
 
+        app.get('/pendingClass', verifyJWT, async (req, res) => {
+            const email = req.query.email;
+            if (!email) {
+                res.send([]);
+            }
+
+            const decodedEmail = req.decoded.email;
+            if (email !== decodedEmail) {
+                return res.status(403).send({ error: true, messege: 'forbidden access' });
+            }
+
+            const query = { email: email };
+            const result = await pendingclassCollection.find(query).toArray();
+            res.send(result);
+        })
+
 
         app.get('/users/admin/:email', verifyJWT, async (req, res) => {
             const email = req.params.email;
@@ -204,6 +220,21 @@ async function run() {
             const result = await selectedCollection.find(query).toArray();
             res.send(result);
         })
+        app.get('/pendingClass', verifyJWT, async (req, res) => {
+            const email = req.query.email;
+            if (!email) {
+                res.send([]);
+            }
+
+            const decodedEmail = req.decoded.email;
+            if (email !== decodedEmail) {
+                return res.status(403).send({ error: true, messege: 'forbidden access' });
+            }
+
+            const query = { email: email };
+            const result = await usersCollection.find(query).toArray();
+            res.send(result);
+        })
 
         app.delete('/selected/:id', verifyJWT, async (req, res) => {
             const id = req.params.id;
@@ -225,19 +256,20 @@ async function run() {
         })
 
         // create payment intent
+       
         app.post('/create-payment-intent', verifyJWT, async (req, res) => {
             const { price } = req.body;
             const amount = parseInt(price * 100);
             const paymentIntent = await stripe.paymentIntents.create({
-                amount: amount,
-                currency: 'usd',
-                payment_method_types: ['card']
+              amount: amount,
+              currency: 'usd',
+              payment_method_types: ['card']
             });
-
+      
             res.send({
-                clientSecret: paymentIntent.client_secret
+              clientSecret: paymentIntent.client_secret
             })
-        })
+          })
 
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
     } finally {
