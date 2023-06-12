@@ -2,6 +2,7 @@ const express = require('express');
 const app = express();
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
+const stripe = require("stripe")(process.env.PAYMENT_SK)
 require('dotenv').config()
 const port = process.env.PORT || 5000;
 
@@ -186,6 +187,21 @@ async function run() {
             const result = await usersCollection.deleteOne(query);
             res.send(result);
         })
+
+        // create payment intent
+    app.post('/create-payment-intent', verifyJWT, async (req, res) => {
+        const { price } = req.body;
+        const amount = parseInt(price * 100);
+        const paymentIntent = await stripe.paymentIntents.create({
+          amount: amount,
+          currency: 'usd',
+          payment_method_types: ['card']
+        });
+  
+        res.send({
+          clientSecret: paymentIntent.client_secret
+        })
+      })
 
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
     } finally {
