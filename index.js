@@ -57,6 +57,7 @@ async function run() {
         const instractorsCollection = client.db("sportsDB").collection("instractors");
         const selectedCollection = client.db("sportsDB").collection("selected");
         const usersCollection = client.db("sportsDB").collection("users");
+        const pendingclassCollection = client.db("sportsDB").collection("pendingClass");
 
         app.post('/jwt', (req, res) => {
             const user = req.body;
@@ -64,12 +65,12 @@ async function run() {
             res.send({ token });
         })
 
-        const verifyAdmin = async(req, res , next) =>{
+        const verifyAdmin = async (req, res, next) => {
             const email = req.decoded.email;
-            const query = {email: email}
+            const query = { email: email }
             const user = await usersCollection.findOne(query);
 
-            if(user?.role !== 'admin'){
+            if (user?.role !== 'admin') {
                 return res.status(403).send({ error: true, messege: 'forbidden message' });
             }
             next();
@@ -79,13 +80,31 @@ async function run() {
             const result = await classCollection.find().toArray();
             res.send(result);
         })
+        app.post('/class', async (req, res) => {
+            const item = req.body;
+            console.log({item});
+            const result = await classCollection.insertOne(item);
+            res.send(result);
+        })
+        app.post('/pendingClass', async (req, res) => {
+            const item = req.body;
+            console.log({item});
+            const result = await pendingclassCollection.insertOne(item);
+            res.send(result);
+        })
+
+        app.get('/pendingClass', verifyJWT, verifyAdmin, async (req, res) => {
+            const result = await pendingclassCollection.find().toArray();
+            res.send(result);
+        })
+
         app.get('/instractors', async (req, res) => {
             const result = await instractorsCollection.find().toArray();
             res.send(result);
         })
         // user collection
 
-        app.get('/users',verifyJWT, verifyAdmin, async (req, res) => {
+        app.get('/users', verifyJWT, verifyAdmin, async (req, res) => {
             const result = await usersCollection.find().toArray();
             res.send(result);
         })
@@ -112,6 +131,17 @@ async function run() {
             const result = await usersCollection.updateOne(filter, updateDoc);
             res.send(result);
         })
+        app.patch('/pendingClass/approved/:id', async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: new ObjectId(id) };
+            const updateDoc = {
+                $set: {
+                    status: 'approved'
+                },
+            };
+            const result = await pendingclassCollection.updateOne(filter, updateDoc);
+            res.send(result);
+        })
         app.patch('/users/instractor/:id', async (req, res) => {
             const id = req.params.id;
             const filter = { _id: new ObjectId(id) };
@@ -125,28 +155,28 @@ async function run() {
         })
 
 
-        app.get('/users/admin/:email', verifyJWT, async(req,res) => {
+        app.get('/users/admin/:email', verifyJWT, async (req, res) => {
             const email = req.params.email;
 
-            if(req.decoded.email !== email){
-                res.send({admin: false})
+            if (req.decoded.email !== email) {
+                res.send({ admin: false })
             }
 
-            const query =  {email: email}
+            const query = { email: email }
             const user = await usersCollection.findOne(query);
-            const result = {admin: user?.role === 'admin'}
+            const result = { admin: user?.role === 'admin' }
             res.send(result);
         })
-        app.get('/users/instractor/:email', verifyJWT, async(req,res) => {
+        app.get('/users/instractor/:email', verifyJWT, async (req, res) => {
             const email = req.params.email;
 
-            if(req.decoded.email !== email){
-                res.send({instractor: false})
+            if (req.decoded.email !== email) {
+                res.send({ instractor: false })
             }
 
-            const query =  {email: email}
+            const query = { email: email }
             const user = await usersCollection.findOne(query);
-            const result = {instractor: user?.role === 'instractor'}
+            const result = { instractor: user?.role === 'instractor' }
             res.send(result);
         })
 
@@ -159,14 +189,14 @@ async function run() {
             res.send(result);
         })
 
-        app.get('/selected',verifyJWT,  async (req, res) => {
+        app.get('/selected', verifyJWT, async (req, res) => {
             const email = req.query.email;
             if (!email) {
                 res.send([]);
             }
 
             const decodedEmail = req.decoded.email;
-            if(email !== decodedEmail){
+            if (email !== decodedEmail) {
                 return res.status(403).send({ error: true, messege: 'forbidden access' });
             }
 
@@ -189,19 +219,19 @@ async function run() {
         })
 
         // create payment intent
-    app.post('/create-payment-intent', verifyJWT, async (req, res) => {
-        const { price } = req.body;
-        const amount = parseInt(price * 100);
-        const paymentIntent = await stripe.paymentIntents.create({
-          amount: amount,
-          currency: 'usd',
-          payment_method_types: ['card']
-        });
-  
-        res.send({
-          clientSecret: paymentIntent.client_secret
+        app.post('/create-payment-intent', verifyJWT, async (req, res) => {
+            const { price } = req.body;
+            const amount = parseInt(price * 100);
+            const paymentIntent = await stripe.paymentIntents.create({
+                amount: amount,
+                currency: 'usd',
+                payment_method_types: ['card']
+            });
+
+            res.send({
+                clientSecret: paymentIntent.client_secret
+            })
         })
-      })
 
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
     } finally {
